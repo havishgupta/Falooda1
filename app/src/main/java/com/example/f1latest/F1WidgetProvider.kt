@@ -36,7 +36,7 @@ class F1WidgetProvider : AppWidgetProvider() {
                         val componentName = ComponentName(context, F1WidgetProvider::class.java)
                         val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
                         
-                        val resultData = fetchF1Data()
+                        val resultData = fetchF1Data(context)
                         
                         for (appWidgetId in appWidgetIds) {
                             val views = RemoteViews(context.packageName, R.layout.f1_widget)
@@ -115,8 +115,8 @@ class F1WidgetProvider : AppWidgetProvider() {
         appWidgetManager.updateAppWidget(appWidgetId, views)
     }
 
-    private suspend fun fetchF1Data(): WidgetData {
-        val repository = F1Repository()
+    private suspend fun fetchF1Data(context: Context): WidgetData {
+        val repository = F1Repository(context)
         return try {
             coroutineScope {
                 val latestSession = try {

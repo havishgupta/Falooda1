@@ -1,7 +1,11 @@
 package com.example.f1latest
 
-class F1Repository {
-    private val openF1 = OpenF1ApiService.create()
+import android.content.Context
+
+class F1Repository(context: Context? = null) {
+    private val openF1 = OpenF1ApiService.create {
+        context?.getSharedPreferences("f1_prefs", Context.MODE_PRIVATE)?.getString("openf1_api_key", null)
+    }
     private val ergastPrimary = F1ApiService.create(F1ApiService.getPrimaryUrl())
     private val ergastFallback = F1ApiService.create(F1ApiService.getFallbackUrl())
 

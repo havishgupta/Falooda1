@@ -88,15 +88,20 @@ interface OpenF1ApiService {
     companion object {
         private const val BASE_URL = "https://api.openf1.org/v1/"
 
-        fun create(): OpenF1ApiService {
+        fun create(tokenProvider: (() -> String?)? = null): OpenF1ApiService {
             val client = OkHttpClient.Builder()
                 .connectTimeout(15, TimeUnit.SECONDS)
                 .readTimeout(15, TimeUnit.SECONDS)
                 .addInterceptor { chain ->
-                    val request = chain.request().newBuilder()
+                    val requestBuilder = chain.request().newBuilder()
                         .header("User-Agent", "F1LatestApp/1.0")
-                        .build()
-                    chain.proceed(request)
+                    
+                    val token = tokenProvider?.invoke()
+                    if (!token.isNullOrBlank()) {
+                        requestBuilder.header("Authorization", "Bearer $token")
+                    }
+                    
+                    chain.proceed(requestBuilder.build())
                 }
                 .build()
 

@@ -12,7 +12,7 @@ import androidx.work.WorkerParameters
 
 class F1SessionWorker(appContext: Context, workerParams: WorkerParameters) : CoroutineWorker(appContext, workerParams) {
 
-    private val repository = F1Repository()
+    private val repository = F1Repository(appContext)
     private val prefs: SharedPreferences = appContext.getSharedPreferences("f1_prefs", Context.MODE_PRIVATE)
 
     override suspend fun doWork(): ListenableWorker.Result {

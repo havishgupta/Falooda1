@@ -1,6 +1,7 @@
 package com.example.f1latest
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -10,17 +11,23 @@ import kotlinx.coroutines.launch
 sealed class OpenF1UiState {
     object Loading : OpenF1UiState()
     data class Success(val session: Session?, val positions: List<Position>, val drivers: List<OpenF1Driver>) : OpenF1UiState()
-    data class Fallback(val race: Race) : OpenF1UiState()
+    data class Fallback(val race: Race, val requiresAuth: Boolean = false) : OpenF1UiState()
     data class Error(val message: String) : OpenF1UiState()
 }
 
-class MainViewModel : ViewModel() {
-    private val repository = F1Repository()
+class MainViewModel(application: Application) : AndroidViewModel(application) {
+    private val repository = F1Repository(application)
+    private val prefs = application.getSharedPreferences("f1_prefs", android.content.Context.MODE_PRIVATE)
 
     private val _uiState = MutableStateFlow<OpenF1UiState>(OpenF1UiState.Loading)
     val uiState: StateFlow<OpenF1UiState> = _uiState.asStateFlow()
 
     init {
+        fetchLatestSessionData()
+    }
+
+    fun saveApiKey(key: String) {
+        prefs.edit().putString("openf1_api_key", key.trim()).apply()
         fetchLatestSessionData()
     }
 
@@ -34,11 +41,11 @@ class MainViewModel : ViewModel() {
                     val drivers = repository.getDrivers(session.sessionKey)
                     _uiState.value = OpenF1UiState.Success(session, positions, drivers)
                 } else {
-                    fetchFallbackData()
+                    fetchFallbackData(requiresAuth = false)
                 }
             } catch (e: Exception) {
                 if (e.message?.contains("401") == true || e.message?.contains("403") == true) {
-                    fetchFallbackData()
+                    fetchFallbackData(requiresAuth = true)
                 } else {
                     _uiState.value = OpenF1UiState.Error("Error fetching data: ${e.message}")
                 }
@@ -46,11 +53,11 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    private suspend fun fetchFallbackData() {
+    private suspend fun fetchFallbackData(requiresAuth: Boolean) {
         try {
             val fallbackRace = repository.getLatestErgastResults()
             if (fallbackRace != null) {
-                _uiState.value = OpenF1UiState.Fallback(fallbackRace)
+                _uiState.value = OpenF1UiState.Fallback(fallbackRace, requiresAuth)
             } else {
                 _uiState.value = OpenF1UiState.Error("No active OpenF1 session found and fallback failed. Note: OpenF1 requires a paid API key during live sessions.")
             }

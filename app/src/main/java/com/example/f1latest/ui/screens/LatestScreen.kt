@@ -15,6 +15,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import com.example.f1latest.MainViewModel
 import com.example.f1latest.OpenF1UiState
 import com.example.f1latest.Session
@@ -27,6 +30,7 @@ import com.example.f1latest.Result
 @Composable
 fun LatestScreen(viewModel: MainViewModel = viewModel()) {
     val uiState by viewModel.uiState.collectAsState()
+    var apiKeyInput by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
@@ -62,9 +66,47 @@ fun LatestScreen(viewModel: MainViewModel = viewModel()) {
                 }
                 is OpenF1UiState.Fallback -> {
                     val race = state.race
-                    Column {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        if (state.requiresAuth) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0))
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text(
+                                        text = "A live F1 session is currently in progress!",
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFFE65100),
+                                        fontSize = 16.sp
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "OpenF1 restricts live telemetry to paid API key holders. Showing the last completed race instead.",
+                                        color = Color.DarkGray,
+                                        fontSize = 14.sp
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    OutlinedTextField(
+                                        value = apiKeyInput,
+                                        onValueChange = { apiKeyInput = it },
+                                        label = { Text("OpenF1 API Key (Optional)") },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        singleLine = true
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Button(
+                                        onClick = { viewModel.saveApiKey(apiKeyInput) },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF1801)),
+                                        modifier = Modifier.align(Alignment.End)
+                                    ) {
+                                        Text("Save & Retry")
+                                    }
+                                }
+                            }
+                        }
+                        
                         RaceHeader(race)
-                        LazyColumn {
+                        LazyColumn(modifier = Modifier.weight(1f)) {
                             items(race.results ?: emptyList()) { result ->
                                 ResultRow(result)
                             }
