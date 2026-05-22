@@ -16,25 +16,26 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.f1latest.MainViewModel
-import com.example.f1latest.F1UiState
-import com.example.f1latest.Race
-import com.example.f1latest.Result
+import com.example.f1latest.OpenF1UiState
+import com.example.f1latest.Session
+import com.example.f1latest.Position
+import com.example.f1latest.OpenF1Driver
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LatestScreen(viewModel: MainViewModel = viewModel()) {
-    val uiState by viewModel.latestRaceState.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("F1 Latest Results", color = Color.White) },
+                title = { Text("F1 Latest Session", color = Color.White) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFFF1801))
             )
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { viewModel.fetchLatestResults() },
+                onClick = { viewModel.fetchLatestSessionData() },
                 containerColor = Color(0xFFFF1801)
             ) {
                 Text("Refresh", color = Color.White, modifier = Modifier.padding(horizontal = 16.dp))
@@ -47,25 +48,44 @@ fun LatestScreen(viewModel: MainViewModel = viewModel()) {
                 .padding(paddingValues)
         ) {
             when (val state = uiState) {
-                is F1UiState.Loading -> {
+                is OpenF1UiState.Loading -> {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
-                is F1UiState.Error -> {
+                is OpenF1UiState.Error -> {
                     Text(
                         text = state.message,
                         color = Color.Red,
                         modifier = Modifier.align(Alignment.Center).padding(16.dp)
                     )
                 }
-                is F1UiState.Success -> {
-                    val race = state.data as Race
-                    Column {
-                        RaceHeader(race)
-                        LazyColumn {
-                            items(race.results ?: emptyList()) { result ->
-                                ResultRow(result)
+                is OpenF1UiState.Success -> {
+                    val session = state.session
+                    val positions = state.positions
+                    val drivers = state.drivers
+                    
+                    if (session != null) {
+                        Column {
+                            SessionHeader(session)
+                            
+                            val latestPositions = positions
+                                .groupBy { it.driverNumber }
+                                .mapValues { it.value.maxByOrNull { pos -> pos.date } }
+                                .values
+                                .filterNotNull()
+                                .sortedBy { it.position }
+                            
+                            LazyColumn {
+                                items(latestPositions) { position ->
+                                    val driver = drivers.find { it.driverNumber == position.driverNumber }
+                                    PositionRow(position, driver)
+                                }
                             }
                         }
+                    } else {
+                        Text(
+                            text = "No active session found.",
+                            modifier = Modifier.align(Alignment.Center).padding(16.dp)
+                        )
                     }
                 }
             }
@@ -74,7 +94,7 @@ fun LatestScreen(viewModel: MainViewModel = viewModel()) {
 }
 
 @Composable
-fun RaceHeader(race: Race) {
+fun SessionHeader(session: Session) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -82,24 +102,20 @@ fun RaceHeader(race: Race) {
             .padding(16.dp)
     ) {
         Text(
-            text = "Season ${race.season} - Round ${race.round}",
+            text = "${session.sessionType} - ${session.circuitName}",
             fontSize = 14.sp,
             color = Color.Gray
         )
         Text(
-            text = race.raceName,
+            text = session.sessionName,
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = race.circuit.circuitName,
-            fontSize = 16.sp
         )
     }
 }
 
 @Composable
-fun ResultRow(result: Result) {
+fun PositionRow(position: Position, driver: OpenF1Driver?) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -114,33 +130,21 @@ fun ResultRow(result: Result) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = result.position,
+                text = "P${position.position}",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.width(40.dp)
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "${result.driver.givenName} ${result.driver.familyName}",
+                    text = driver?.fullName ?: "Driver ${position.driverNumber}",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Medium
                 )
                 Text(
-                    text = result.constructor.name,
+                    text = driver?.teamName ?: "Unknown Team",
                     fontSize = 14.sp,
                     color = Color.Gray
-                )
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = "${result.points} pts",
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFFFF1801)
-                )
-                Text(
-                    text = result.time?.time ?: result.status,
-                    fontSize = 12.sp,
-                    color = Color.DarkGray
                 )
             }
         }

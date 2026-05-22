@@ -39,6 +39,13 @@ data class Lap(
     @Json(name = "is_pit_out_lap") val isPitOutLap: Boolean
 )
 
+data class Position(
+    @Json(name = "session_key") val sessionKey: Int,
+    @Json(name = "driver_number") val driverNumber: Int,
+    @Json(name = "date") val date: String,
+    @Json(name = "position") val position: Int
+)
+
 data class OpenF1Driver(
     @Json(name = "driver_number") val driverNumber: Int,
     @Json(name = "full_name") val fullName: String,
@@ -72,6 +79,11 @@ interface OpenF1ApiService {
         @Query("session_key") sessionKey: String = "latest",
         @Query("driver_number") drivers: List<Int> = listOf(1, 16, 12)
     ): List<IntervalData>
+
+    @GET("position")
+    suspend fun getPositions(
+        @Query("session_key") sessionKey: String = "latest"
+    ): List<Position>
 
     companion object {
         private const val BASE_URL = "https://api.openf1.org/v1/"
