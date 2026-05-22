@@ -7,6 +7,7 @@ import android.content.SharedPreferences
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
+import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
 
 class F1SessionWorker(appContext: Context, workerParams: WorkerParameters) : CoroutineWorker(appContext, workerParams) {
@@ -14,15 +15,15 @@ class F1SessionWorker(appContext: Context, workerParams: WorkerParameters) : Cor
     private val repository = F1Repository()
     private val prefs: SharedPreferences = appContext.getSharedPreferences("f1_prefs", Context.MODE_PRIVATE)
 
-    override suspend fun doWork(): Result {
+    override suspend fun doWork(): ListenableWorker.Result {
         return try {
-            val session = repository.getLatestSession() ?: return Result.success()
+            val session = repository.getLatestSession() ?: return ListenableWorker.Result.success()
             val sessionType = session.sessionType.lowercase()
 
             val positions = repository.getPositions(session.sessionKey)
             val raceControl = repository.getRaceControl(session.sessionKey)
 
-            if (positions.isEmpty()) return Result.success()
+            if (positions.isEmpty()) return ListenableWorker.Result.success()
 
             // Find positions for our targeted drivers
             val targetedDrivers = listOf(1, 16, 12)
@@ -94,9 +95,9 @@ class F1SessionWorker(appContext: Context, workerParams: WorkerParameters) : Cor
                 sendNotification("F1 Update: ${session.sessionName}", notificationMessage)
             }
 
-            Result.success()
+            ListenableWorker.Result.success()
         } catch (e: Exception) {
-            Result.retry()
+            ListenableWorker.Result.retry()
         }
     }
 
