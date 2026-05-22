@@ -161,14 +161,31 @@ class F1WidgetProvider : AppWidgetProvider() {
                         }
                         return@coroutineScope WidgetData(sessionName = "${latestSession.circuitName} - ${latestSession.sessionName}", drivers = drivers)
                     } else {
-                        return@coroutineScope WidgetData(error = "No positions available")
+                        // Attempt Fallback if no positions
+                        return@coroutineScope fetchFallbackWidgetData(repository)
                     }
                 } else {
-                    return@coroutineScope WidgetData(error = "No active session")
+                    return@coroutineScope fetchFallbackWidgetData(repository)
                 }
             }
         } catch (e: Exception) {
             WidgetData(error = e.localizedMessage ?: "Unknown Error")
+        }
+    }
+
+    private suspend fun fetchFallbackWidgetData(repository: F1Repository): WidgetData {
+        return try {
+            val fallbackRace = repository.getLatestErgastResults()
+            if (fallbackRace != null) {
+                val drivers = fallbackRace.results?.take(5)?.map {
+                    "${it.position}. ${it.driver.givenName} ${it.driver.familyName} - ${it.points} pts"
+                } ?: emptyList()
+                WidgetData(sessionName = fallbackRace.raceName, drivers = drivers)
+            } else {
+                WidgetData(error = "No active session")
+            }
+        } catch (e: Exception) {
+            WidgetData(error = "Fallback failed: ${e.message}")
         }
     }
 

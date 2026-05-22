@@ -20,6 +20,8 @@ import com.example.f1latest.OpenF1UiState
 import com.example.f1latest.Session
 import com.example.f1latest.Position
 import com.example.f1latest.OpenF1Driver
+import com.example.f1latest.Race
+import com.example.f1latest.Result
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,6 +59,17 @@ fun LatestScreen(viewModel: MainViewModel = viewModel()) {
                         color = Color.Red,
                         modifier = Modifier.align(Alignment.Center).padding(16.dp)
                     )
+                }
+                is OpenF1UiState.Fallback -> {
+                    val race = state.race
+                    Column {
+                        RaceHeader(race)
+                        LazyColumn {
+                            items(race.results ?: emptyList()) { result ->
+                                ResultRow(result)
+                            }
+                        }
+                    }
                 }
                 is OpenF1UiState.Success -> {
                     val session = state.session
@@ -145,6 +158,80 @@ fun PositionRow(position: Position, driver: OpenF1Driver?) {
                     text = driver?.teamName ?: "Unknown Team",
                     fontSize = 14.sp,
                     color = Color.Gray
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun RaceHeader(race: Race) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFFEEEEEE))
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Season ${race.season} - Round ${race.round}",
+            fontSize = 14.sp,
+            color = Color.Gray
+        )
+        Text(
+            text = race.raceName,
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = race.circuit.circuitName,
+            fontSize = 16.sp
+        )
+    }
+}
+
+@Composable
+fun ResultRow(result: Result) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = result.position,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.width(40.dp)
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "${result.driver.givenName} ${result.driver.familyName}",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = result.constructor.name,
+                    fontSize = 14.sp,
+                    color = Color.Gray
+                )
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = "${result.points} pts",
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFFF1801)
+                )
+                Text(
+                    text = result.time?.time ?: result.status,
+                    fontSize = 12.sp,
+                    color = Color.DarkGray
                 )
             }
         }

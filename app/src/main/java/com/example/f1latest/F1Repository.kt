@@ -2,6 +2,30 @@ package com.example.f1latest
 
 class F1Repository {
     private val openF1 = OpenF1ApiService.create()
+    private val ergastPrimary = F1ApiService.create(F1ApiService.getPrimaryUrl())
+    private val ergastFallback = F1ApiService.create(F1ApiService.getFallbackUrl())
+
+    private suspend fun <T> withFallback(
+        primaryCall: suspend () -> T,
+        fallbackCall: suspend () -> T
+    ): T? {
+        return try {
+            primaryCall()
+        } catch (e: Exception) {
+            try {
+                fallbackCall()
+            } catch (e2: Exception) {
+                null
+            }
+        }
+    }
+
+    suspend fun getLatestErgastResults(): Race? {
+        return withFallback(
+            { ergastPrimary.getLatestResults().mrData.raceTable?.races?.firstOrNull() },
+            { ergastFallback.getLatestResults().mrData.raceTable?.races?.firstOrNull() }
+        )
+    }
 
     suspend fun getLatestSession(): Session? {
         return try {
